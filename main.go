@@ -6,38 +6,15 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"regexp"
 	"syscall"
 	"time"
 
+	"github.com/Alma-media/kuzya/api"
 	"github.com/Alma-media/kuzya/state/database"
 	"github.com/Alma-media/kuzya/state/database/sqlite"
 	"github.com/Alma-media/kuzya/state/memory"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
-
-var expr = regexp.MustCompile(`^\/trig-in\/(.*)$`)
-
-func createHandler(trig func(string) (string, error)) mqtt.MessageHandler {
-	return func(client mqtt.Client, msg mqtt.Message) {
-		if !expr.MatchString(msg.Topic()) {
-			log.Println("invalid device format")
-
-			return
-		}
-
-		deviceID := expr.FindStringSubmatch(msg.Topic())[1]
-
-		state, err := trig(deviceID)
-		if err != nil {
-			log.Printf("cannot retrieve current state: %s", err)
-
-			return
-		}
-
-		client.Publish("/trig-out/"+deviceID, 0, false, state).Wait()
-	}
-}
 
 func main() {
 	stateSwitch := memory.NewSwitch().Switch
@@ -69,7 +46,7 @@ func main() {
 		log.Fatalf("failed to initialize a client: %s", token.Error())
 	}
 
-	token := client.Subscribe("/trig-in/+", 0, createHandler(stateSwitch))
+	token := client.Subscribe("/trig-in/+", 0, api.CreateStateHandler(stateSwitch))
 
 	if token.Wait() && token.Error() != nil {
 		log.Fatalf("failed to subscribe: %s", token.Error())
