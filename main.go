@@ -16,10 +16,16 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-func main() {
-	stateSwitch := memory.NewSwitch().Switch
+type stateManager interface {
+	Switch(deviceID string) (payload string, err error)
+	Status(deviceID string) (payload string, err error)
+}
 
-	if true {
+func main() {
+	var state stateManager = memory.NewSwitch()
+
+	// TODO: parse config variables
+	if false {
 		db, err := sql.Open("sqlite3", "state.db")
 		if err != nil {
 			log.Fatalf("unable to establish database connection: %s", err)
@@ -31,7 +37,7 @@ func main() {
 
 		defer db.Close()
 
-		stateSwitch = database.NewSwitch(db, new(sqlite.StateManager)).Switch
+		state = database.NewSwitch(db, new(sqlite.StateManager))
 	}
 
 	mqtt.DEBUG = log.New(os.Stdout, "", 0)
@@ -46,7 +52,11 @@ func main() {
 		log.Fatalf("failed to initialize a client: %s", token.Error())
 	}
 
-	if err := api.RegisterHandler(client, "switch", stateSwitch); err != nil {
+	if err := api.RegisterHandler(client, "switch", state.Switch); err != nil {
+		log.Fatalf("failed to subscribe: %s", err)
+	}
+
+	if err := api.RegisterHandler(client, "status", state.Status); err != nil {
 		log.Fatalf("failed to subscribe: %s", err)
 	}
 

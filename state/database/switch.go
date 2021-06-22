@@ -47,3 +47,7 @@ func (sw *Switch) Switch(deviceID string) (string, error) {
 
 	return state.Status(!status), nil
 }
+
+func (sw *Switch) Status(deviceID string) (string, error) {
+	panic("not implemented")
+}
