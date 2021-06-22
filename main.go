@@ -46,10 +46,8 @@ func main() {
 		log.Fatalf("failed to initialize a client: %s", token.Error())
 	}
 
-	token := client.Subscribe("/trig-in/+", 0, api.CreateStateHandler(stateSwitch))
-
-	if token.Wait() && token.Error() != nil {
-		log.Fatalf("failed to subscribe: %s", token.Error())
+	if err := api.RegisterHandler(client, "switch", stateSwitch); err != nil {
+		log.Fatalf("failed to subscribe: %s", err)
 	}
 
 	termChan := make(chan os.Signal, 1)
