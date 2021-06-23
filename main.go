@@ -21,8 +21,19 @@ type stateManager interface {
 	Status(deviceID string) (payload string, err error)
 }
 
+type endpoint struct {
+	name    string
+	handler func(string) (string, error)
+}
+
 func main() {
-	var state stateManager = memory.NewSwitch()
+	var (
+		state     stateManager = memory.NewSwitch()
+		endpoints              = []endpoint{
+			{"switch", state.Switch},
+			{"status", state.Status},
+		}
+	)
 
 	// TODO: parse config variables
 	if false {
@@ -52,12 +63,10 @@ func main() {
 		log.Fatalf("failed to initialize a client: %s", token.Error())
 	}
 
-	if err := api.RegisterHandler(client, "switch", state.Switch); err != nil {
-		log.Fatalf("failed to subscribe: %s", err)
-	}
-
-	if err := api.RegisterHandler(client, "status", state.Status); err != nil {
-		log.Fatalf("failed to subscribe: %s", err)
+	for _, endpoint := range endpoints {
+		if err := api.RegisterHandler(client, endpoint.name, endpoint.handler); err != nil {
+			log.Fatalf("failed to register handler for endpoint %q: %s", endpoint.name, err)
+		}
 	}
 
 	termChan := make(chan os.Signal, 1)
