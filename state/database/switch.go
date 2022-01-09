@@ -7,9 +7,17 @@ import (
 	"github.com/Alma-media/kuzya/state"
 )
 
+type QueryRower interface {
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
+type Execer interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+}
+
 type StateManager interface {
-	Get(tx *sql.Tx, deviceID string) (bool, error)
-	Set(tx *sql.Tx, deviceID string, state bool) error
+	Get(tx QueryRower, deviceID string) (bool, error)
+	Set(tx Execer, deviceID string, state bool) error
 }
 
 type Switch struct {
@@ -49,5 +57,10 @@ func (sw *Switch) Switch(deviceID string) (string, error) {
 }
 
 func (sw *Switch) Status(deviceID string) (string, error) {
-	panic("not implemented")
+	status, err := sw.state.Get(sw.db, deviceID)
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	return state.Status(status), nil
 }

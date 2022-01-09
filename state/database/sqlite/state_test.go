@@ -54,7 +54,7 @@ func TestStateManagerGet(t *testing.T) {
 		defer tx.Rollback()
 
 		state, err := new(StateManager).Get(tx, "unknown-device")
-		if err != sql.ErrNoRows {
+		if err != errNoDevice {
 			t.Errorf("unexpected error: %s", err)
 		}
 
