@@ -8,7 +8,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-type Handle func(devviceID string) (state string, err error)
+type Handle func(deviceID string) (state string, err error)
 
 func inputURL(method string) string {
 	return fmt.Sprintf("/trig.in.%s", method)
