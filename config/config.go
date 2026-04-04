@@ -1,8 +1,15 @@
 package config
 
 type Config struct {
+	Broker  Broker
 	Storage Storage
 }
+
+type Broker struct {
+	DSN      string `default:"tcp://localhost:1883"`
+	ClientID string `default:"kuzya"`
+}
+
 
 type Storage struct {
 	Type     string `default:"memory"`
