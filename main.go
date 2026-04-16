@@ -43,11 +43,14 @@ func main() {
 		log.Fatalf("unable to parse the config: %s", err)
 	}
 
+	var db *sql.DB
+
 	switch appConfig.Storage.Type {
 	case "memory":
 		state = memory.NewSwitch()
 	case "database":
-		db, err := sql.Open(appConfig.Storage.Database.Driver, appConfig.Storage.Database.DSN)
+		var err error
+		db, err = sql.Open(appConfig.Storage.Database.Driver, appConfig.Storage.Database.DSN)
 		if err != nil {
 			log.Fatalf("unable to establish database connection: %s", err)
 		}
@@ -56,15 +59,17 @@ func main() {
 			log.Fatalf("database migration failure: %s", err)
 		}
 
-		defer db.Close()
+		defer func() {
+			if err := db.Close(); err != nil {
+				log.Printf("error closing database: %s", err)
+			}
+		}()
 
 		state = database.NewSwitch(db, new(sqlite.StateManager))
 	default:
 		log.Fatalf("unknown storage type %q", appConfig.Storage.Type)
 	}
 
-	mqtt.DEBUG = log.New(os.Stdout, "", 0)
-	mqtt.ERROR = log.New(os.Stdout, "", 0)
 	opts := mqtt.
 		NewClientOptions().
 		AddBroker(appConfig.Broker.DSN).
@@ -77,6 +82,7 @@ func main() {
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatalf("failed to initialize a client: %s", token.Error())
 	}
+	defer client.Disconnect(250)
 
 	endpoints := []endpoint{
 		{"switch", state.Switch},
@@ -89,16 +95,25 @@ func main() {
 		}
 	}
 
+	httpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%d", appConfig.HTTP.Port),
+		Handler: http.HandlerFunc(handler.NewHandler(state).StatusHandler),
+	}
+
 	go func() {
 		log.Printf("Started API on port %d", appConfig.HTTP.Port)
 
-		http.ListenAndServe(
-			fmt.Sprintf(":%d", appConfig.HTTP.Port),
-			http.HandlerFunc(handler.NewHandler(state).StatusHandler),
-		)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server error: %s", err)
+		}
 	}()
 
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
 	<-termChan
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	httpServer.Shutdown(shutdownCtx)
 }
