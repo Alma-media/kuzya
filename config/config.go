@@ -1,13 +1,18 @@
 package config
 
 type Config struct {
+	HTTP    HTTP
 	Broker  Broker
 	Storage Storage
 }
 
+type HTTP struct {
+	Port int `default:"8080"`
+}
+
 type Broker struct {
 	DSN      string `default:"tcp://localhost:1883"`
-	ClientID string `default:"kuzya"`
+	ClientID string `default:"kuzya-state-manager"`
 }
 
 

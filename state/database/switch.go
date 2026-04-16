@@ -15,9 +15,14 @@ type Execer interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 }
 
+type Querier interface {
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+}
+
 type StateManager interface {
 	Get(tx QueryRower, deviceID string) (bool, error)
 	Set(tx Execer, deviceID string, state bool) error
+	List(tx Querier) ([]state.Device, error)
 }
 
 type Switch struct {
@@ -63,4 +68,8 @@ func (sw *Switch) Status(deviceID string) (string, error) {
 	}
 
 	return state.Status(status), nil
+}
+
+func (sw *Switch) List() ([]state.Device, error) {
+	return sw.state.List(sw.db)
 }

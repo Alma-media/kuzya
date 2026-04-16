@@ -12,3 +12,8 @@ func Status(status bool) string {
 
 	return OFF
 }
+
+type Device struct {
+	ID    string `json:"device_id"`
+	State string `json:"state"`
+}

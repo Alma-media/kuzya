@@ -44,3 +44,19 @@ func (sw *Switch) Status(deviceID string) (string, error) {
 
 	return state.OFF, nil
 }
+
+func (sw *Switch) List() ([]state.Device, error) {
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+
+	devices := make([]state.Device, 0, len(sw.states))
+
+	for id, status := range sw.states {
+		devices = append(devices, state.Device{
+			ID:    id,
+			State: state.Status(status),
+		})
+	}
+
+	return devices, nil
+}

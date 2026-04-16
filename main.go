@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +13,8 @@ import (
 
 	"github.com/Alma-media/kuzya/api"
 	"github.com/Alma-media/kuzya/config"
+	handler "github.com/Alma-media/kuzya/http"
+	st "github.com/Alma-media/kuzya/state"
 	"github.com/Alma-media/kuzya/state/database"
 	"github.com/Alma-media/kuzya/state/database/sqlite"
 	"github.com/Alma-media/kuzya/state/memory"
@@ -21,6 +25,7 @@ import (
 type stateManager interface {
 	Switch(deviceID string) (payload string, err error)
 	Status(deviceID string) (payload string, err error)
+	List() ([]st.Device, error)
 }
 
 type endpoint struct {
@@ -83,6 +88,15 @@ func main() {
 			log.Fatalf("failed to register handler for endpoint %q: %s", endpoint.name, err)
 		}
 	}
+
+	go func() {
+		log.Printf("Started API on port %d", appConfig.HTTP.Port)
+
+		http.ListenAndServe(
+			fmt.Sprintf(":%d", appConfig.HTTP.Port),
+			http.HandlerFunc(handler.NewHandler(state).StatusHandler),
+		)
+	}()
 
 	termChan := make(chan os.Signal, 1)
 	signal.Notify(termChan, syscall.SIGINT, syscall.SIGTERM)
