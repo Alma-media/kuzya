@@ -20,6 +20,7 @@ import (
 
 type stateManager interface {
 	Switch(deviceID string) (payload string, err error)
+	SetState(deviceID, requested string) (payload string, err error)
 	Status(deviceID string) (payload string, err error)
 }
 
@@ -82,6 +83,15 @@ func main() {
 		if err := api.RegisterHandler(client, endpoint.name, endpoint.handler); err != nil {
 			log.Fatalf("failed to register handler for endpoint %q: %s", endpoint.name, err)
 		}
+	}
+
+	// Absolute set: payload ON|OFF on /trig.in.setswitch/<ID> sets the
+	// channel (scenes, schedules — anything that must not depend on the
+	// current phase). The result is published to /trig.out.switch/<ID>, the
+	// same topic the toggle uses, so existing fan-out and mirrors keep
+	// working untouched.
+	if err := api.RegisterSetter(client, "setswitch", "switch", state.SetState); err != nil {
+		log.Fatalf("failed to register handler for endpoint %q: %s", "setswitch", err)
 	}
 
 	termChan := make(chan os.Signal, 1)

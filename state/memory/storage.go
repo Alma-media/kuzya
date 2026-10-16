@@ -33,6 +33,23 @@ func (sw *Switch) Switch(deviceID string) (string, error) {
 	return state.OFF, nil
 }
 
+// SetState applies an absolute state ("ON"/"OFF") instead of toggling.
+// Scenes and schedules need it: toggling an unknown-phase channel is how
+// "evening scene" ends up turning the lights off.
+func (sw *Switch) SetState(deviceID, requested string) (string, error) {
+	target, err := state.Parse(requested)
+	if err != nil {
+		return "", err
+	}
+
+	sw.mu.Lock()
+	defer sw.mu.Unlock()
+
+	sw.states[deviceID] = target
+
+	return state.Status(target), nil
+}
+
 func (sw *Switch) Status(deviceID string) (string, error) {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
