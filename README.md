@@ -1,3 +1,15 @@
+# ⚠️ Archived — superseded by switchboard
+
+This service's role (persistent channel state on the `/trig.*` topics) now
+lives **inside [switchboard](https://github.com/Alma-media/switchboard)**
+as its `internal/channels` module, on byte-identical MQTT topics: buttons,
+elsa pipes and relays keep working with zero re-wiring. Run only one owner
+of channel state — stop kuzya and run switchboard with `-broker`; channels
+seed themselves from the console's bound devices, no database import.
+See switchboard's README ("Channel devices" / "Migrating from kuzya").
+
+---
+
 # Status manager
 
 ### Endpoints
